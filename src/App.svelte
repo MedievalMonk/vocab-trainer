@@ -26,6 +26,12 @@
 {:else if !app.svc}
   <div class="page"><p class="muted">Opening the card index…</p></div>
 {:else}
+  {#if app.applyUpdate && !app.session}
+    <div class="update" role="status">
+      <span>A new version is ready.</span>
+      <button class="btn" onclick={() => app.applyUpdate?.()}>Reload to update</button>
+    </div>
+  {/if}
   <nav class="tabs" aria-label="Sections">
     <span class="brand mono">Vocab · Index</span>
     {#each TABS as t (t.route)}
@@ -46,6 +52,27 @@
 {/if}
 
 <style>
+  .update {
+    position: fixed;
+    z-index: 30;
+    left: 0.8rem;
+    right: 0.8rem;
+    bottom: calc(4.2rem + env(safe-area-inset-bottom));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 3px;
+    border-top: 3px solid var(--stamp);
+    padding: 0.6rem 0.9rem;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+  }
+  .update .btn { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  @media (min-width: 52rem) {
+    .update { left: auto; right: 1.5rem; bottom: 1.5rem; max-width: 28rem; }
+  }
   .tabs {
     position: fixed;
     z-index: 20;

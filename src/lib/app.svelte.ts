@@ -23,6 +23,8 @@ export interface SessionSpec {
 
 class AppState {
   session = $state.raw<SessionSpec | null>(null)
+  /** Set when a new version of the app is installed and waiting; calling it switches over. */
+  applyUpdate = $state.raw<(() => void) | null>(null)
   svc = $state.raw<VocabService | null>(null)
   /** Bumped after every write so views re-read the service. */
   rev = $state(0)
