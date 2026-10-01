@@ -295,3 +295,55 @@ describe('storage', () => {
     }
   })
 })
+
+describe('"due today" means the whole day', () => {
+  /** Brings one word to the Review stage, then stands 5 hours before it falls due, same calendar day. */
+  async function wordDueLaterToday() {
+    const { svc, clock } = await setup({ start: '2026-10-01T09:00:00.000Z' })
+    await svc.importMarkdown(text('Idioms', 1))
+    const id = ids(svc)[0]
+    await svc.markExposed([id])
+    clock.now = new Date(clock.now.getTime() + HOUR)
+    for (let i = 0; i < 6; i++) {
+      await svc.review(id, 3, 'repetition')
+      clock.now = new Date(Math.max(svc.card(id)!.due.getTime(), clock.now.getTime()))
+    }
+    const due = svc.card(id)!.due
+    // Move to 05:00 on the due day, so the card is due later today.
+    const early = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 0, 0, 0))
+    clock.now = new Date(early.getTime() + 1 * HOUR)
+    return { svc, clock, id, due }
+  }
+
+  it('a review-stage word due later today is offered now, matching the dashboard count', async () => {
+    const { svc, id, due, clock } = await wordDueLaterToday()
+    expect(due.getTime()).toBeGreaterThan(clock.now.getTime()) // not yet due by the clock
+    expect(svc.card(id)!.state).toBe(2) // Review
+    const d = svc.dashboard()
+    expect(d.dueToday).toBe(1)
+    expect(d.dueNow).toBe(1) // available now: it is due today
+    expect(svc.repetitions()).toEqual([id])
+  })
+
+  it('a short learning step is still waited out: a word due in 10 minutes is not offered yet', async () => {
+    const { svc, clock } = await setup()
+    await svc.importMarkdown(text('Idioms', 1))
+    const id = ids(svc)[0]
+    await svc.markExposed([id])
+    clock.now = new Date(clock.now.getTime() + HOUR)
+    await svc.review(id, 3, 'repetition') // first answer: due again in minutes, still learning
+    expect(svc.card(id)!.state).toBe(1)
+    expect(svc.dashboard().dueToday).toBe(1)
+    expect(svc.repetitions()).toEqual([])
+    clock.now = new Date(svc.card(id)!.due.getTime())
+    expect(svc.repetitions()).toEqual([id])
+  })
+
+  it('counts them toward the backlog the same way', async () => {
+    const { svc, id } = await wordDueLaterToday()
+    expect(svc.dashboard().remainingToday).toBeGreaterThanOrEqual(1)
+    await svc.updateSettings({ dailyCap: 1 })
+    await svc.review(id, 3, 'repetition')
+    expect(svc.dashboard().remainingToday).toBe(0)
+  })
+})

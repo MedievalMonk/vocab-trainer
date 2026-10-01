@@ -1,4 +1,4 @@
-import type { Card, FSRS } from 'ts-fsrs'
+import { State, type Card, type FSRS } from 'ts-fsrs'
 import type { EntryState, VocabState } from './events'
 import { addDays, dayKey } from './history'
 import { retrievability } from './scheduler'
@@ -25,13 +25,18 @@ export interface DueItem {
   retrievability: number
 }
 
-/** Cards due at or before `cutoff`, most at risk of being forgotten first. */
-export function dueItems(ctx: QueueContext, cutoff: Date): DueItem[] {
+/**
+ * What Repetitions can serve right now: "whatever is due today". A word at the review stage
+ * (scheduled in whole days) is available all of the day it falls due; a word on a short
+ * learning step (minutes) still waits for its time.
+ */
+export function availableItems(ctx: QueueContext): DueItem[] {
+  const endOfToday = new Date(dayStartMs(ctx.now.getTime(), ctx.tzOffsetMin) + DAY_MS - 1)
   const out: DueItem[] = []
   for (const [id, card] of ctx.cards) {
-    if (card.due.getTime() <= cutoff.getTime()) {
-      out.push({ id, due: card.due, retrievability: retrievability(card, ctx.f, ctx.now) })
-    }
+    const due = card.due.getTime()
+    const available = due <= ctx.now.getTime() || (card.state === State.Review && due <= endOfToday.getTime())
+    if (available) out.push({ id, due: card.due, retrievability: retrievability(card, ctx.f, ctx.now) })
   }
   return out.sort((a, b) => a.retrievability - b.retrievability || a.due.getTime() - b.due.getTime() || (a.id < b.id ? -1 : 1))
 }
@@ -60,7 +65,7 @@ export interface BacklogInfo {
 }
 
 export function backlogInfo(state: VocabState, ctx: QueueContext): BacklogInfo {
-  const dueNow = dueItems(ctx, ctx.now).length
+  const dueNow = availableItems(ctx).length
   const doneToday = reviewsDoneToday(state, ctx)
   const remainingToday = Math.max(0, ctx.settings.dailyCap - doneToday)
   return { dueNow, doneToday, remainingToday, active: dueNow > remainingToday }
@@ -70,7 +75,7 @@ export function backlogInfo(state: VocabState, ctx: QueueContext): BacklogInfo {
 export function repetitionBatch(state: VocabState, ctx: QueueContext, batchSize = ctx.settings.batchSize): string[] {
   const { remainingToday } = backlogInfo(state, ctx)
   const size = Math.min(batchSize, remainingToday)
-  return dueItems(ctx, ctx.now).slice(0, size).map((d) => d.id)
+  return availableItems(ctx).slice(0, size).map((d) => d.id)
 }
 
 export interface Dashboard extends BacklogInfo {
