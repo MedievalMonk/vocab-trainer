@@ -1,1 +1,192 @@
-body { margin: 0; }
+/*
+  Archival index-card look: paper cards filed on an ink-navy desk.
+  Serif headwords (catalogue label), plain sans for reading, mono for catalogue marks.
+  No web fonts: everything works offline.
+*/
+:root {
+  color-scheme: dark;
+  --desk: #0c1726;
+  --desk-2: #12233a;
+  --desk-3: #1a304d;
+  --desk-line: #263f60;
+  --paper: #e4e1d0;
+  --paper-2: #d9d6c2;
+  --paper-edge: #bfbca6;
+  --ink: #14223a;
+  --ink-2: #3f4f68;
+  --ink-3: #66748a;
+  --rule: #b4c4d3;
+  --stamp: #8c2c31;
+  --brass: #c9b27c;
+  --good: #2f6b52;
+  --text: #dde0d3;
+  --text-2: #a3b3c7;
+  --text-3: #7c8da4;
+  --serif: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, 'Times New Roman', serif;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'Cascadia Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  background: var(--desk);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 18px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse at 50% -10%, #17304f 0%, transparent 60%),
+    var(--desk);
+}
+h1, h2, h3 {
+  font-family: var(--serif);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0;
+}
+p { margin: 0 0 0.8em; }
+a { color: var(--brass); }
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.muted { color: var(--text-2); }
+.page {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 7rem;
+}
+@media (min-width: 52rem) {
+  .page { padding: 2.5rem 2rem 4rem; }
+}
+
+/* Buttons */
+.btn {
+  appearance: none;
+  border: 1px solid var(--desk-line);
+  background: var(--desk-2);
+  color: var(--text);
+  padding: 0.7rem 1.1rem;
+  border-radius: 3px;
+  cursor: pointer;
+  min-height: 2.75rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--desk-3); border-color: #35547c; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: #1c1708;
+  font-weight: 600;
+}
+.btn.primary:hover { background: #d6c18c; }
+.btn.quiet { background: transparent; }
+.btn.danger { border-color: #6b2a2f; color: #e4a3a6; }
+
+/* Form fields (on the desk) */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+.field > span { font-size: 0.8rem; color: var(--text-2); }
+.input {
+  background: #0a1422;
+  border: 1px solid var(--desk-line);
+  border-radius: 3px;
+  padding: 0.65rem 0.75rem;
+  min-height: 2.75rem;
+  width: 100%;
+}
+textarea.input { min-height: 7rem; resize: vertical; line-height: 1.45; }
+
+/* Index card */
+.card {
+  position: relative;
+  color: var(--ink);
+  background:
+    linear-gradient(to bottom, transparent 2.55rem, var(--stamp) 2.55rem, var(--stamp) calc(2.55rem + 1.5px), transparent calc(2.55rem + 1.5px)),
+    var(--paper);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.35) inset, 0 2px 0 var(--paper-edge), 0 14px 34px rgb(0 0 0 / 0.5);
+  padding: 3.2rem 1.5rem 1.6rem;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+.card.wide {
+  max-width: 46rem;
+  background:
+    linear-gradient(to bottom, transparent 2.55rem, var(--stamp) 2.55rem, var(--stamp) calc(2.55rem + 1.5px), transparent calc(2.55rem + 1.5px)),
+    linear-gradient(to bottom, transparent calc(2.55rem + 5px), var(--stamp) calc(2.55rem + 5px), var(--stamp) calc(2.55rem + 5.5px), transparent calc(2.55rem + 5.5px)),
+    var(--paper-2);
+  border-left: 5px solid var(--ink);
+}
+.card .catalog {
+  position: absolute;
+  top: 0.8rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card .tab {
+  position: absolute;
+  top: -1.45rem;
+  right: 1.5rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.9rem 0.3rem;
+  border-radius: 3px 3px 0 0;
+}
+.headword {
+  font-family: var(--serif);
+  font-size: 2.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+.pos {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
