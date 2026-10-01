@@ -10,6 +10,7 @@ export function exportMarkdown(state: VocabState, opts: { now: string; fsrs?: (i
     status: e.status,
     dateAdded: e.dateAdded,
     firstSeen: e.firstSeen,
+    knownAt: e.knownAt,
     fsrs: opts.fsrs?.(e.id),
     reviews: e.reviews.map((r) => ({ ts: r.ts, rating: r.rating })),
   }))

@@ -16,19 +16,31 @@ interface EventBase {
 
 export type VocabEvent = EventBase &
   (
-    | { type: 'entry.add'; entryId: string; content: EntryContent; status: Status; dateAdded: string }
+    | { type: 'entry.add'; entryId: string; content: EntryContent; status: Status; dateAdded: string; knownAt?: string }
     | { type: 'entry.update'; entryId: string; fields: Partial<EntryContent> }
     | { type: 'entry.delete'; entryId: string }
     | { type: 'status.set'; entryId: string; status: Status }
-    /** The teach-first flashcard pass was completed for this entry. */
-    | { type: 'exposure'; entryId: string }
-    | { type: 'review'; entryId: string; rating: Rating; mode?: string }
+    /**
+     * The teach-first flashcard pass was completed for this entry.
+     * `restoredAt`: this event comes from a backup imported at that time (its `ts` is the original moment).
+     */
+    | { type: 'exposure'; entryId: string; restoredAt?: string }
+    | { type: 'review'; entryId: string; rating: Rating; mode?: string; exercise?: string; restoredAt?: string }
+    /**
+     * Learning progress starts over: every word is `new` again and the history restarts.
+     * Words and their content are kept. Progress older than the latest reset is ignored on
+     * replay. A restored event counts as happening when it was imported, so a backup restored
+     * after a reset comes back, and one restored before it is wiped with everything else.
+     */
+    | { type: 'progress.reset' }
   )
 
 export interface ReviewRecord {
   ts: string
   rating: Rating
   mode?: string
+  /** Which exercise type was answered: flashcard, choice, recall or blank. */
+  exercise?: string
 }
 
 export interface EntryState {
@@ -37,6 +49,8 @@ export interface EntryState {
   status: Status
   dateAdded: string
   firstSeen?: string
+  /** When the word was filed as known (only while it is known). */
+  knownAt?: string
   deleted: boolean
   reviews: ReviewRecord[]
   /** Creation order; used to keep exports and listings in source order. */
@@ -49,10 +63,12 @@ export interface VocabState {
   /** Events for entries whose `entry.add` has not been seen (yet). */
   orphans: Map<string, VocabEvent[]>
   nextSeq: number
+  /** Timestamp of the latest `progress.reset`, or '' if there never was one. */
+  resetAt: string
 }
 
 export function emptyState(): VocabState {
-  return { entries: new Map(), seenEvents: new Set(), orphans: new Map(), nextSeq: 0 }
+  return { entries: new Map(), seenEvents: new Set(), orphans: new Map(), nextSeq: 0, resetAt: '' }
 }
 
 function compareEvents(a: VocabEvent, b: VocabEvent): number {
@@ -68,8 +84,25 @@ function compareEvents(a: VocabEvent, b: VocabEvent): number {
  */
 export function replay(events: Iterable<VocabEvent>): VocabState {
   const state = emptyState()
-  for (const e of [...events].sort(compareEvents)) applyEvent(state, e)
+  const sorted = [...events].sort(compareEvents)
+  // The latest reset is known up front, so progress logged before it can be recognised as
+  // stale wherever it appears in the order.
+  for (const e of sorted) if (e.type === 'progress.reset' && e.ts > state.resetAt) state.resetAt = e.ts
+  for (const e of sorted) applyEvent(state, e)
   return state
+}
+
+/** Progress from before the latest reset no longer counts. */
+function isStale(state: VocabState, e: VocabEvent): boolean {
+  const happened = ('restoredAt' in e && e.restoredAt) || e.ts
+  return happened < state.resetAt
+}
+
+function setStatus(entry: EntryState, status: Status, ts: string, knownAt?: string): void {
+  if (status === 'known') {
+    if (entry.status !== 'known' || !entry.knownAt) entry.knownAt = knownAt ?? ts
+  } else entry.knownAt = undefined
+  entry.status = status
 }
 
 /** Applies one event in place. Callers must feed events in sorted order. */
@@ -84,21 +117,26 @@ function applyInner(state: VocabState, e: VocabEvent): void {
     case 'entry.add': {
       const existing = state.entries.get(e.entryId)
       if (existing && !existing.deleted) return
+      // A word added before the latest reset starts over as `new`.
+      const stale = isStale(state, e)
+      const status: Status = stale ? 'new' : e.status
       if (existing) {
         existing.deleted = false
         existing.content = structuredClone(e.content)
-        existing.status = e.status
         existing.dateAdded = e.dateAdded
+        setStatus(existing, status, e.ts, e.knownAt)
       } else {
-        state.entries.set(e.entryId, {
+        const created: EntryState = {
           id: e.entryId,
           content: structuredClone(e.content),
-          status: e.status,
+          status: 'new',
           dateAdded: e.dateAdded,
           deleted: false,
           reviews: [],
           seq: state.nextSeq++,
-        })
+        }
+        setStatus(created, status, e.ts, e.knownAt)
+        state.entries.set(e.entryId, created)
       }
       const waiting = state.orphans.get(e.entryId)
       if (waiting) {
@@ -121,13 +159,16 @@ function applyInner(state: VocabState, e: VocabEvent): void {
       }
       if (e.type === 'entry.update') entry.content = { ...entry.content, ...structuredClone(e.fields) }
       else if (e.type === 'entry.delete') entry.deleted = true
-      else if (e.type === 'status.set') entry.status = e.status
-      else if (e.type === 'exposure') noteSeen(entry, e.ts)
-      else {
+      else if (e.type === 'status.set') {
+        if (!isStale(state, e)) setStatus(entry, e.status, e.ts)
+      } else if (e.type === 'exposure') {
+        if (!isStale(state, e)) noteSeen(entry, e.ts)
+      } else {
+        if (isStale(state, e)) return
         // The same review can arrive under different event ids (live, then restored from a
         // backup or synced from another device); one entry can't have two identical ones.
         if (!entry.reviews.some((r) => r.ts === e.ts && r.rating === e.rating)) {
-          entry.reviews.push({ ts: e.ts, rating: e.rating, mode: e.mode })
+          entry.reviews.push({ ts: e.ts, rating: e.rating, mode: e.mode, exercise: e.exercise })
         }
         noteSeen(entry, e.ts)
       }

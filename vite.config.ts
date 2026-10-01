@@ -29,7 +29,7 @@ function serviceWorker(): Plugin {
       }
       walk(outDir)
       const urls = files.filter((f) => f !== 'sw.js').sort()
-      const template = readFileSync(resolve(__dirname, 'scripts/sw.template.js'), 'utf8')
+      const template = readFileSync(resolve(import.meta.dirname, 'scripts/sw.template.js'), 'utf8')
       const hash = createHash('sha256').update(template)
       for (const f of urls) hash.update(f).update(readFileSync(join(outDir, f)))
       const version = hash.digest('hex').slice(0, 12)

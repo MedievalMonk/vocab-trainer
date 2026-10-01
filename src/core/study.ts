@@ -35,10 +35,11 @@ export function reviewEvents(
   mode: string,
   now: Date,
   settings: Settings,
+  exercise?: string,
 ): VocabEvent[] {
   if (!card) throw new Error(`"${entry.content.word}" has not had its teach-first pass yet`)
   const ts = now.toISOString()
-  const out: VocabEvent[] = [factory.make({ type: 'review', entryId: entry.id, rating, mode }, { ts })]
+  const out: VocabEvent[] = [factory.make({ type: 'review', entryId: entry.id, rating, mode, ...(exercise ? { exercise } : {}) }, { ts })]
   const next = f.next(card, now, rating as Grade).card
   let status: Status = entry.status
   if (rating === 1 && entry.status === 'known') status = 'learning'

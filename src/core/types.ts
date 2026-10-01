@@ -43,6 +43,8 @@ export interface ParsedEntry extends EntryContent {
   status?: Status
   dateAdded?: string
   firstSeen?: string
+  /** When the word was filed as known, if the file says. */
+  knownAt?: string
   reviews: ReviewMark[]
   /** Non-empty means the entry is unusable (missing required field). */
   problems: string[]

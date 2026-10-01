@@ -368,3 +368,19 @@ describe.skipIf(!fs.existsSync(CONTENT_DIR))('real content files', () => {
     expect(log.length).toBe(before)
   })
 })
+
+describe('entry order', () => {
+  it('keeps the order of the source file through import and export', () => {
+    const words = Array.from({ length: 40 }, (_, i) => `word${String(i).padStart(2, '0')}`)
+    const text =
+      'Collection: Idioms\n\n## Part One\n\n' +
+      words.map((w) => `## ${w}\n- **POS:** noun\n- **Definition:** d\n- **Example:** e\n- **Polish:** p\n- **Tags:** t\n- **Status:** new\n`).join('\n')
+    const log: VocabEvent[] = []
+    doImport(log, text)
+    const state = replay(log)
+    expect([...state.entries.values()].map((e) => e.content.word)).toEqual(words)
+    const md = exportMarkdown(state, { now: T2 })
+    expect(md.match(/^## Part One$/gm)).toHaveLength(1) // not repeated between scrambled entries
+    expect([...md.matchAll(/^## (word\d+)$/gm)].map((m) => m[1])).toEqual(words)
+  })
+})

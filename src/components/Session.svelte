@@ -66,7 +66,7 @@
     busy = true
     const id = exercise.entryId
     const before = entryOf(id).status
-    const after = await app.run((s) => s.review(id, rating, initial.mode))
+    const after = await app.run((s) => s.review(id, rating, initial.mode, exercise?.kind))
     if (rating > 1) tally.right++
     else {
       tally.wrong++

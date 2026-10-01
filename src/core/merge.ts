@@ -84,6 +84,9 @@ export function planImport(
   const byKey = new Map<string, EntryState>()
   for (const e of state.entries.values()) byKey.set(entryKey(e.content), e)
   const seenInFile = new Set<string>()
+  // Replay orders events by timestamp, so entries added together need distinct, increasing
+  // timestamps or they would come back in id order instead of the file's order.
+  let addedSoFar = 0
 
   for (const parsed of doc.entries) {
     if (parsed.problems.length) {
@@ -104,10 +107,15 @@ export function planImport(
 
     if (!existing) {
       entryId = entryIdFor(key)
+      const status = parsed.status ?? 'new'
       events.push(
         factory.make(
-          { type: 'entry.add', entryId, content, status: parsed.status ?? 'new', dateAdded: parsed.dateAdded ?? ctx.now.slice(0, 10) },
-          { id: `add:${entryId}` },
+          {
+            type: 'entry.add', entryId, content, status,
+            dateAdded: parsed.dateAdded ?? ctx.now.slice(0, 10),
+            ...(status === 'known' && parsed.knownAt ? { knownAt: parsed.knownAt } : {}),
+          },
+          { id: `add:${entryId}`, ts: new Date(Date.parse(ctx.now) + addedSoFar++).toISOString() },
         ),
       )
       report.added++
@@ -126,13 +134,15 @@ export function planImport(
 
     if (parsed.firstSeen) {
       const id = `ex:${entryId}:${parsed.firstSeen}`
-      if (!state.seenEvents.has(id)) events.push(factory.make({ type: 'exposure', entryId }, { id, ts: parsed.firstSeen }))
+      if (!state.seenEvents.has(id)) {
+        events.push(factory.make({ type: 'exposure', entryId, restoredAt: ctx.now }, { id, ts: parsed.firstSeen }))
+      }
     }
     for (const r of parsed.reviews) {
       const id = `rv:${entryId}:${r.ts}:${r.rating}`
       if (state.seenEvents.has(id)) continue
       if (existing?.reviews.some((x) => x.ts === r.ts && x.rating === r.rating)) continue
-      events.push(factory.make({ type: 'review', entryId, rating: r.rating, mode: 'restored' }, { id, ts: r.ts }))
+      events.push(factory.make({ type: 'review', entryId, rating: r.rating, mode: 'restored', restoredAt: ctx.now }, { id, ts: r.ts }))
       report.reviewsRestored++
     }
   }

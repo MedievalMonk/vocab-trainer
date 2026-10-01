@@ -1,5 +1,6 @@
 import type { Card, FSRS } from 'ts-fsrs'
 import type { EntryState, VocabState } from './events'
+import { addDays, dayKey } from './history'
 import { retrievability } from './scheduler'
 import type { Settings } from './settings'
 
@@ -66,9 +67,9 @@ export function backlogInfo(state: VocabState, ctx: QueueContext): BacklogInfo {
 }
 
 /** Next Repetitions batch: most urgent first, never beyond the daily cap or the batch size. */
-export function repetitionBatch(state: VocabState, ctx: QueueContext): string[] {
+export function repetitionBatch(state: VocabState, ctx: QueueContext, batchSize = ctx.settings.batchSize): string[] {
   const { remainingToday } = backlogInfo(state, ctx)
-  const size = Math.min(ctx.settings.batchSize, remainingToday)
+  const size = Math.min(batchSize, remainingToday)
   return dueItems(ctx, ctx.now).slice(0, size).map((d) => d.id)
 }
 
@@ -99,6 +100,21 @@ export function dashboard(state: VocabState, ctx: QueueContext): Dashboard {
   return { ...backlogInfo(state, ctx), dueToday: forecast[0], dailyCap: ctx.settings.dailyCap, forecast, perCollection }
 }
 
+/**
+ * Reviews due on each real calendar day, from today on. Today includes everything overdue,
+ * as it does in the dashboard's due-today count.
+ */
+export function dueByDay(ctx: QueueContext, days: number): Record<string, number> {
+  const today = dayKey(ctx.now.getTime(), ctx.tzOffsetMin)
+  const out: Record<string, number> = {}
+  for (const card of ctx.cards.values()) {
+    let key = dayKey(card.due.getTime(), ctx.tzOffsetMin)
+    if (key < today) key = today
+    if (key <= addDays(today, days - 1)) out[key] = (out[key] ?? 0) + 1
+  }
+  return out
+}
+
 export type NewWordsMode = { kind: 'random' } | { kind: 'collection'; collection: string } | { kind: 'recent' }
 
 const inCollection = (entryCollection: string, wanted: string) => entryCollection === wanted || entryCollection.startsWith(wanted + ' > ')
@@ -115,6 +131,7 @@ export function newWordsBatch(
   ctx: QueueContext,
   mode: NewWordsMode,
   rng: () => number = Math.random,
+  batchSize = ctx.settings.batchSize,
 ): { ids: string[]; paused: boolean } {
   if (backlogInfo(state, ctx).active) return { ids: [], paused: true }
   let pool = [...state.entries.values()].filter(isUnseen)
@@ -129,17 +146,17 @@ export function newWordsBatch(
   } else {
     pool.sort((a, b) => a.seq - b.seq)
   }
-  return { ids: pool.slice(0, ctx.settings.batchSize).map((e) => e.id), paused: false }
+  return { ids: pool.slice(0, batchSize).map((e) => e.id), paused: false }
 }
 
 /**
  * Words that have had their teach-first pass but no quiz yet: the "New Words revisit" pool.
  * Quizzing them is allowed regardless of the backlog (it adds no new material).
  */
-export function revisitBatch(state: VocabState, ctx: QueueContext): string[] {
+export function revisitBatch(state: VocabState, ctx: QueueContext, batchSize = ctx.settings.batchSize): string[] {
   return [...state.entries.values()]
     .filter((e) => !e.deleted && e.firstSeen && e.reviews.length === 0)
     .sort((a, b) => (a.firstSeen! < b.firstSeen! ? -1 : 1))
-    .slice(0, ctx.settings.batchSize)
+    .slice(0, batchSize)
     .map((e) => e.id)
 }

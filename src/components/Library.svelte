@@ -15,6 +15,10 @@
   let editing = $state<{ id: string | null } | null>(null)
   let showImport = $state(false)
 
+  const counts = $derived.by(() => {
+    app.rev
+    return app.svc!.counts()
+  })
   const all = $derived.by(() => {
     app.rev
     return [...app.svc!.state.entries.values()].filter((e) => !e.deleted)
@@ -65,7 +69,12 @@
 
 <div class="page">
   <div class="title">
-    <h1>Library <small class="muted">{all.length} words</small></h1>
+    <div>
+      <h1>Library</h1>
+      <p class="totals muted">
+        <b>{counts.total}</b> words in the library · <b>{counts.studied}</b> studied · <b>{counts.known}</b> known · <b>{counts.notStarted}</b> not started
+      </p>
+    </div>
     <div class="row">
       <button class="btn" onclick={() => (editing = { id: null })}>Add a word</button>
       <button class="btn" class:primary={all.length === 0} onclick={() => (showImport = !showImport)}>{showImport ? 'Hide import' : 'Import / Export'}</button>
@@ -141,7 +150,8 @@
 <style>
   .title { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
   h1 { font-size: 2.2rem; }
-  h1 small { font-family: var(--sans); font-size: 0.9rem; font-weight: 400; margin-left: 0.6rem; }
+  .totals { margin: 0.4rem 0 0; font-size: 0.92rem; }
+  .totals b { color: var(--text); font-weight: 600; }
   .row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
   .filters { display: grid; gap: 0.6rem; margin-bottom: 1rem; }
   @media (min-width: 52rem) { .filters { grid-template-columns: 2fr 1.2fr 0.8fr; } }

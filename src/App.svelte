@@ -5,6 +5,7 @@
   import Games from './components/Games.svelte'
   import Library from './components/Library.svelte'
   import Session from './components/Session.svelte'
+  import Stats from './components/Stats.svelte'
   import Study from './components/Study.svelte'
 
   onMount(() => app.init())
@@ -13,6 +14,7 @@
     { route: 'review', label: 'Review' },
     { route: 'study', label: 'Study' },
     { route: 'library', label: 'Library' },
+    { route: 'stats', label: 'Stats' },
     { route: 'games', label: 'Games' },
   ]
 </script>
@@ -44,6 +46,7 @@
   {#if app.route === 'review'}<Dashboard />
   {:else if app.route === 'study'}<Study />
   {:else if app.route === 'library'}<Library />
+  {:else if app.route === 'stats'}<Stats />
   {:else}<Games />{/if}
 
   {#if app.session}
@@ -80,7 +83,7 @@
     right: 0;
     bottom: 0;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     background: var(--desk-2);
     border-top: 1px solid var(--desk-line);
     padding-bottom: env(safe-area-inset-bottom);

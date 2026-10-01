@@ -1,8 +1,8 @@
 import { VocabService } from '../core/service'
 import { IndexedDbStore } from '../core/store'
 
-export type Route = 'review' | 'study' | 'library' | 'games'
-const ROUTES: Route[] = ['review', 'study', 'library', 'games']
+export type Route = 'review' | 'study' | 'library' | 'stats' | 'games'
+const ROUTES: Route[] = ['review', 'study', 'library', 'stats', 'games']
 
 const fromHash = (): Route => {
   const h = location.hash.replace(/^#\/?/, '') as Route

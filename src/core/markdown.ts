@@ -18,7 +18,7 @@ const H2_RE = /^##\s+(.+?)\s*$/
 const REQUIRED = ['pos', 'definition', 'example', 'polish'] as const
 const KNOWN_FIELDS = new Set([
   'pos', 'definition', 'example', 'polish', 'tags', 'status', 'register',
-  'similar expressions', 'similar_expressions', 'date added', 'first seen', 'fsrs', 'reviews',
+  'similar expressions', 'similar_expressions', 'date added', 'first seen', 'known since', 'fsrs', 'reviews',
 ])
 
 type WarnFn = (line: number, level: ParseWarning['level'], message: string) => void
@@ -143,6 +143,7 @@ function buildEntry(block: RawBlock, collection: string, section: string | undef
     else warn(block.line, 'warn', `Bad date added "${f['date added']}" for "${word}"`)
   }
   const firstSeen = f['first seen'] ? (normalizeTs(f['first seen']) ?? undefined) : undefined
+  const knownAt = f['known since'] ? (normalizeTs(f['known since']) ?? undefined) : undefined
 
   const reviews: ReviewMark[] = []
   if (f.reviews) {
@@ -166,6 +167,7 @@ function buildEntry(block: RawBlock, collection: string, section: string | undef
     status,
     dateAdded,
     firstSeen,
+    knownAt,
     reviews,
     problems,
     line: block.line,
@@ -183,6 +185,7 @@ export interface ExportRow {
   status: Status
   dateAdded: string
   firstSeen?: string
+  knownAt?: string
   /** Informational FSRS summary. Ignored on import: state is recomputed from the reviews. */
   fsrs?: string
   reviews: ReviewMark[]
@@ -223,6 +226,7 @@ export function serializeMarkdown(rows: ExportRow[], meta: { exportedAt?: string
     field('Status', row.status)
     field('Date added', row.dateAdded)
     field('First seen', row.firstSeen)
+    field('Known since', row.status === 'known' ? row.knownAt : undefined)
     field('FSRS', row.fsrs)
     field('Reviews', row.reviews.map((r) => `${r.ts}=${r.rating}`).join(', '))
     for (const [label, value] of Object.entries(c.extra)) field(label, value)

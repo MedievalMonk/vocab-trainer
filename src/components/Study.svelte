@@ -9,6 +9,16 @@
   let modeKind = $state<NewWordsMode['kind']>('random')
   let collection = $state('')
   let lock = $state<'mixed' | ExerciseKind>('mixed')
+  // Any batch size you like: starts at your saved default and is remembered when you change it.
+  let sizeText = $state(String(app.svc!.settings.batchSize))
+  const size = $derived.by(() => {
+    const n = Math.floor(Number(sizeText))
+    return Number.isFinite(n) && n >= 1 ? Math.min(n, 500) : app.svc!.settings.batchSize
+  })
+  async function rememberSize() {
+    sizeText = String(size)
+    if (size !== app.svc!.settings.batchSize) await app.run((s) => s.updateSettings({ batchSize: size }))
+  }
 
   const collections = $derived.by(() => {
     app.rev
@@ -19,11 +29,11 @@
   )
   const batch = $derived.by(() => {
     app.rev
-    return app.svc!.newWords(mode)
+    return app.svc!.newWords(mode, undefined, size)
   })
   const revisit = $derived.by(() => {
     app.rev
-    return app.svc!.revisit()
+    return app.svc!.revisit(size)
   })
   const dash = $derived.by(() => {
     app.rev
@@ -31,17 +41,17 @@
   })
   const repBatch = $derived.by(() => {
     app.rev
-    return app.svc!.repetitions()
+    return app.svc!.repetitions(size)
   })
 
   function startTeach() {
-    app.startSession({ kind: 'teach', ids: app.svc!.newWords(mode).ids, lock, mode: 'new', title: 'New words' })
+    app.startSession({ kind: 'teach', ids: app.svc!.newWords(mode, undefined, size).ids, lock, mode: 'new', title: 'New words' })
   }
   function startRevisit() {
-    app.startSession({ kind: 'quiz', ids: app.svc!.revisit(), lock, mode: 'revisit', title: 'Quiz: taught words' })
+    app.startSession({ kind: 'quiz', ids: app.svc!.revisit(size), lock, mode: 'revisit', title: 'Quiz: taught words' })
   }
   function startReps() {
-    app.startSession({ kind: 'quiz', ids: app.svc!.repetitions(), lock, mode: 'repetition', title: 'Repetitions' })
+    app.startSession({ kind: 'quiz', ids: app.svc!.repetitions(size), lock, mode: 'repetition', title: 'Repetitions' })
   }
 
   const MODES: { kind: NewWordsMode['kind']; label: string; hint: string }[] = [
@@ -61,10 +71,15 @@
     </button>
   </div>
 
+  <label class="field size">
+    <span>Words per batch</span>
+    <input class="input" type="number" inputmode="numeric" min="1" max="500" bind:value={sizeText} onchange={rememberSize} />
+  </label>
+
   {#if tab === 'new'}
     <section>
       <p class="muted lead">
-        Batches of {app.svc!.settings.batchSize}. New words are first <em>taught</em> as plain flashcards, with no scoring, and only then quizzed.
+        New words are first <em>taught</em> as plain flashcards, with no scoring, and only then quizzed.
       </p>
 
       <div class="modes">
@@ -119,7 +134,7 @@
   {:else}
     <section>
       <p class="muted lead">
-        Words the scheduler says you are about to forget, most at risk first. Never more than your daily limit ({dash.dailyCap}).
+        Words the scheduler says you are about to forget, most at risk first. A batch is never larger than what is left of your daily limit ({dash.dailyCap}).
       </p>
       <div class="facts">
         <div><b>{dash.dueNow}</b><span>due now</span></div>
@@ -160,6 +175,7 @@
   .tabs button.on { background: var(--desk-2); border-color: var(--desk-line); color: var(--text); margin-bottom: -1px; }
   .badge { margin-left: 0.5rem; font-family: var(--mono); font-size: 0.7rem; background: var(--brass); color: #1c1708; padding: 0.1rem 0.45rem; border-radius: 99px; }
   .lead { max-width: 40rem; }
+  .size { max-width: 10rem; margin-bottom: 1.2rem; }
   .modes { display: grid; gap: 0.6rem; margin: 1.4rem 0; }
   @media (min-width: 40rem) { .modes { grid-template-columns: repeat(3, 1fr); } }
   .mode {

@@ -9,6 +9,8 @@ export interface EventStore {
   append(events: VocabEvent[]): Promise<void>
   getMeta<T>(key: string): Promise<T | undefined>
   setMeta(key: string, value: unknown): Promise<void>
+  /** Deletes every event and all metadata on this device. */
+  clearAll(): Promise<void>
 }
 
 export class MemoryStore implements EventStore {
@@ -25,6 +27,10 @@ export class MemoryStore implements EventStore {
   }
   async setMeta(key: string, value: unknown) {
     this.meta.set(key, value)
+  }
+  async clearAll() {
+    this.events.clear()
+    this.meta.clear()
   }
 }
 
@@ -91,6 +97,14 @@ export class IndexedDbStore implements EventStore {
     const db = await this.db()
     const tx = db.transaction(META, 'readwrite')
     tx.objectStore(META).put(value, key)
+    await done(tx)
+  }
+
+  async clearAll(): Promise<void> {
+    const db = await this.db()
+    const tx = db.transaction([EVENTS, META], 'readwrite')
+    tx.objectStore(EVENTS).clear()
+    tx.objectStore(META).clear()
     await done(tx)
   }
 

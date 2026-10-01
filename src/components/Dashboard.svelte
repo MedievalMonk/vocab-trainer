@@ -1,7 +1,10 @@
 <script lang="ts">
   import { app } from '../lib/app.svelte'
   import { devSeedAvailable, devSeedTexts } from '../lib/devseed'
+  import { addDays } from '../core/history'
   import { crumb } from '../lib/format'
+  import Calendar from './Calendar.svelte'
+  import DataPanel from './DataPanel.svelte'
 
   const dash = $derived.by(() => {
     app.rev
@@ -16,13 +19,24 @@
     return app.svc!.settings
   })
 
+  const cal = $derived.by(() => {
+    app.rev
+    return app.svc!.calendar()
+  })
   const dayLabels = $derived(
     dash.forecast.map((_, i) => {
-      if (i === 0) return 'Today'
-      const d = new Date(Date.now() + i * 86_400_000)
-      return d.toLocaleDateString('en-GB', { weekday: 'short' })
+      const key = addDays(cal.today, i)
+      const d = new Date(key + 'T00:00:00Z')
+      const wd = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })
+      return `${wd} ${d.getUTCDate()}`
     }),
   )
+  const sinceLabel = $derived(
+    cal.since
+      ? new Date(cal.since + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+      : null,
+  )
+  const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) + '%' : '–')
   const maxBar = $derived(Math.max(1, ...dash.forecast))
   const weekTotal = $derived(dash.forecast.reduce((a, b) => a + b, 0))
 
@@ -116,6 +130,23 @@
       </section>
     </div>
 
+    <section class="history">
+      <div class="h-head">
+        <h2>Calendar and history</h2>
+        {#if sinceLabel}
+          <span class="mono since">Since {sinceLabel}{cal.sinceReset ? ' · last reset' : ''}</span>
+        {/if}
+      </div>
+      <dl class="tiles">
+        <div><dt>Answers</dt><dd>{cal.totals.reviews}</dd></div>
+        <div><dt>Correct</dt><dd>{pct(cal.totals.correct, cal.totals.reviews)}</dd></div>
+        <div><dt>Words taught</dt><dd>{cal.totals.taught}</dd></div>
+        <div><dt>Filed as known</dt><dd>{cal.totals.known}</dd></div>
+        <div><dt>Days studied</dt><dd>{cal.totals.activeDays}</dd></div>
+      </dl>
+      <Calendar data={cal} />
+    </section>
+
     <details class="settings">
       <summary class="mono">Settings</summary>
       <label class="field">
@@ -127,6 +158,7 @@
           Your browser has not granted permanent storage. Install the app to the home screen, and keep exporting Markdown backups.
         </p>
       {/if}
+      <DataPanel />
     </details>
   {/if}
 </div>
@@ -203,6 +235,13 @@
   .index i { flex: 1; border-bottom: 1px dotted var(--text-3); transform: translateY(-0.25em); }
   .index .n { font-family: var(--mono); color: var(--brass); }
 
+  .history { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--desk-line); }
+  .h-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+  .since { color: var(--text-3); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.2rem, 1fr)); gap: 0.8rem; margin: 0 0 2rem; }
+  .tiles div { background: var(--desk-2); border: 1px solid var(--desk-line); border-radius: 3px; padding: 0.8rem 1rem; }
+  .tiles dt { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); }
+  .tiles dd { margin: 0.2rem 0 0; font-family: var(--serif); font-size: 1.9rem; line-height: 1.1; }
   .welcome { max-width: 36rem; margin: 3rem auto; display: grid; gap: 1rem; }
   .welcome h1 { font-size: 2.2rem; }
   .settings { margin-top: 3rem; color: var(--text-2); }
