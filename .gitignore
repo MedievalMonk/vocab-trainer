@@ -4,5 +4,5 @@ node_modules/
 dist/
 .DS_Store
 *.log
-SPEC.md
+SPEC*.md
 .claude/

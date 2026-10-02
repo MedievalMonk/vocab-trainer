@@ -1,3 +1,4 @@
+import type { ClusterContent } from './clusters'
 import { FORMAT_VERSION, type EntryContent, type Rating, type Status } from './types'
 
 /**
@@ -33,6 +34,11 @@ export type VocabEvent = EventBase &
      * after a reset comes back, and one restored before it is wiped with everything else.
      */
     | { type: 'progress.reset' }
+    /** Synonym clusters (The Thesaurus): their own items with their own review history. */
+    | { type: 'cluster.add'; clusterId: string; content: ClusterContent }
+    | { type: 'cluster.update'; clusterId: string; fields: Partial<ClusterContent> }
+    | { type: 'cluster.delete'; clusterId: string }
+    | { type: 'cluster.review'; clusterId: string; rating: Rating; correct?: number; total?: number; mode?: string; restoredAt?: string }
   )
 
 export interface ReviewRecord {
@@ -57,18 +63,36 @@ export interface EntryState {
   seq: number
 }
 
+export interface ClusterReviewRecord {
+  ts: string
+  rating: Rating
+  correct?: number
+  total?: number
+}
+
+export interface ClusterState {
+  id: string
+  content: ClusterContent
+  deleted: boolean
+  reviews: ClusterReviewRecord[]
+  firstSeen?: string
+  seq: number
+}
+
 export interface VocabState {
   entries: Map<string, EntryState>
+  clusters: Map<string, ClusterState>
   seenEvents: Set<string>
   /** Events for entries whose `entry.add` has not been seen (yet). */
   orphans: Map<string, VocabEvent[]>
   nextSeq: number
+  nextClusterSeq: number
   /** Timestamp of the latest `progress.reset`, or '' if there never was one. */
   resetAt: string
 }
 
 export function emptyState(): VocabState {
-  return { entries: new Map(), seenEvents: new Set(), orphans: new Map(), nextSeq: 0, resetAt: '' }
+  return { entries: new Map(), clusters: new Map(), seenEvents: new Set(), orphans: new Map(), nextSeq: 0, nextClusterSeq: 0, resetAt: '' }
 }
 
 function compareEvents(a: VocabEvent, b: VocabEvent): number {
@@ -171,6 +195,49 @@ function applyInner(state: VocabState, e: VocabEvent): void {
           entry.reviews.push({ ts: e.ts, rating: e.rating, mode: e.mode, exercise: e.exercise })
         }
         noteSeen(entry, e.ts)
+      }
+      return
+    }
+    case 'cluster.add': {
+      const existing = state.clusters.get(e.clusterId)
+      if (existing && !existing.deleted) return
+      if (existing) {
+        existing.deleted = false
+        existing.content = structuredClone(e.content)
+      } else {
+        state.clusters.set(e.clusterId, {
+          id: e.clusterId,
+          content: structuredClone(e.content),
+          deleted: false,
+          reviews: [],
+          seq: state.nextClusterSeq++,
+        })
+      }
+      const waiting = state.orphans.get(e.clusterId)
+      if (waiting) {
+        state.orphans.delete(e.clusterId)
+        for (const w of waiting) applyInner(state, w)
+      }
+      return
+    }
+    case 'cluster.update':
+    case 'cluster.delete':
+    case 'cluster.review': {
+      const cluster = state.clusters.get(e.clusterId)
+      if (!cluster) {
+        const list = state.orphans.get(e.clusterId) ?? []
+        list.push(e)
+        state.orphans.set(e.clusterId, list)
+        return
+      }
+      if (e.type === 'cluster.update') cluster.content = { ...cluster.content, ...structuredClone(e.fields) }
+      else if (e.type === 'cluster.delete') cluster.deleted = true
+      else {
+        if (isStale(state, e)) return
+        if (!cluster.reviews.some((r) => r.ts === e.ts && r.rating === e.rating)) {
+          cluster.reviews.push({ ts: e.ts, rating: e.rating, correct: e.correct, total: e.total })
+        }
+        if (!cluster.firstSeen || e.ts < cluster.firstSeen) cluster.firstSeen = e.ts
       }
       return
     }

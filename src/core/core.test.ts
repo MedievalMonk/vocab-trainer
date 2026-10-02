@@ -6,6 +6,7 @@ import { createEventFactory, parseLog, replay, serializeLog, type EntryState, ty
 import { exportMarkdown } from './export'
 import { entryIdFor, entryKey } from './identity'
 import { planImport, type ImportReport } from './merge'
+import { hasClusters } from './clusters'
 import { parseMarkdown } from './markdown'
 
 const T0 = '2026-10-01T10:00:00.000Z'
@@ -335,7 +336,9 @@ describe.skipIf(!fs.existsSync(CONTENT_DIR))('real content files', () => {
   it('parses every file with no errors and no incomplete entries', () => {
     expect(files.length).toBeGreaterThanOrEqual(10)
     for (const f of files) {
-      const doc = parseMarkdown(fs.readFileSync(path.join(CONTENT_DIR, f), 'utf8'))
+      const text = fs.readFileSync(path.join(CONTENT_DIR, f), 'utf8')
+      if (hasClusters(text)) continue // synonym clusters have their own format and tests (clusters.test.ts)
+      const doc = parseMarkdown(text)
       expect(doc.warnings.filter((w) => w.level === 'error'), f).toEqual([])
       expect(doc.collections, f).toHaveLength(1)
     }

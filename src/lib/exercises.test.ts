@@ -78,7 +78,11 @@ describe('isPhrase / headword', () => {
     expect(isPhrase(entry('1', 'x', { pos: 'idiom' }).content)).toBe(true)
     expect(isPhrase(entry('1', 'x', { collection: 'Idioms' }).content)).toBe(true)
     expect(isPhrase(entry('1', 'x', { register: 'informal' }).content)).toBe(true)
+    expect(isPhrase(entry('1', 'x', { pos: 'idiom (verb phrase)' }).content)).toBe(true)
     expect(isPhrase(entry('1', 'x').content)).toBe(false)
+    // Ordinary multi-word terms are not idioms: 285 entries in the real content are "noun phrase".
+    expect(isPhrase(entry('1', 'atomic number', { pos: 'noun phrase' }).content)).toBe(false)
+    expect(isPhrase(entry('1', 'checks and balances', { pos: 'noun phrase', collection: 'School Subjects > Civics' }).content)).toBe(false)
     expect(headword('range (statistics)')).toBe('range')
   })
 })

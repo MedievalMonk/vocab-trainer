@@ -1,8 +1,8 @@
 import { VocabService } from '../core/service'
 import { IndexedDbStore } from '../core/store'
 
-export type Route = 'review' | 'study' | 'library' | 'stats' | 'games'
-const ROUTES: Route[] = ['review', 'study', 'library', 'stats', 'games']
+export type Route = 'review' | 'study' | 'library' | 'thesaurus' | 'stats' | 'games'
+const ROUTES: Route[] = ['review', 'study', 'library', 'thesaurus', 'stats', 'games']
 
 const fromHash = (): Route => {
   const h = location.hash.replace(/^#\/?/, '') as Route
@@ -21,8 +21,15 @@ export interface SessionSpec {
   title: string
 }
 
+/** A Thesaurus activity. `practice` is graded (the clusters' own schedule); the games never are. */
+export type ThesaurusSpec =
+  | { kind: 'practice'; clusterIds: string[]; title: string }
+  | { kind: 'duel' }
+  | { kind: 'ladder' }
+
 class AppState {
   session = $state.raw<SessionSpec | null>(null)
+  thesaurus = $state.raw<ThesaurusSpec | null>(null)
   /** Set when a new version of the app is installed and waiting; calling it switches over. */
   applyUpdate = $state.raw<(() => void) | null>(null)
   svc = $state.raw<VocabService | null>(null)
@@ -37,8 +44,9 @@ class AppState {
     addEventListener('hashchange', () => (this.route = fromHash()))
     // The phone's Back button closes a session instead of leaving the app.
     addEventListener('popstate', () => {
-      if (this.session) {
+      if (this.session || this.thesaurus) {
         this.session = null
+        this.thesaurus = null
         this.bump()
       }
     })
@@ -64,6 +72,19 @@ class AppState {
     if (history.state?.session) history.back()
     else {
       this.session = null
+      this.bump()
+    }
+  }
+
+  startThesaurus(spec: ThesaurusSpec) {
+    history.pushState({ session: 1 }, '')
+    this.thesaurus = spec
+  }
+
+  endThesaurus() {
+    if (history.state?.session) history.back()
+    else {
+      this.thesaurus = null
       this.bump()
     }
   }

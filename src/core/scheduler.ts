@@ -1,5 +1,5 @@
 import { createEmptyCard, fsrs, generatorParameters, State, type Card, type FSRS, type Grade } from 'ts-fsrs'
-import type { EntryState } from './events'
+import type { ClusterState, EntryState } from './events'
 import type { Settings } from './settings'
 
 /**
@@ -7,8 +7,20 @@ import type { Settings } from './settings'
  * and card state is recomputed by replaying the review log on every device, so the
  * result must be identical everywhere.
  */
-export function createFsrs(requestRetention: number): FSRS {
-  return fsrs(generatorParameters({ request_retention: requestRetention, enable_fuzz: false }))
+export function createFsrs(requestRetention: number, shortTermSteps = true): FSRS {
+  return fsrs(generatorParameters({ request_retention: requestRetention, enable_fuzz: false, enable_short_term: shortTermSteps }))
+}
+
+/**
+ * Card for a synonym cluster, replayed from its practice rounds. Use an FSRS built with
+ * shortTermSteps=false: a round is a substantial session, so clusters are scheduled in days,
+ * never "again in 10 minutes". Separate from every word's card by construction.
+ */
+export function cardForCluster(cluster: ClusterState, f: FSRS): Card | null {
+  if (!cluster.reviews.length) return null
+  let card: Card = createEmptyCard(new Date(cluster.reviews[0].ts))
+  for (const r of cluster.reviews) card = f.next(card, new Date(r.ts), r.rating as Grade).card
+  return card
 }
 
 /**

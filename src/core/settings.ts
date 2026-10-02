@@ -9,6 +9,8 @@ export interface Settings {
   firstReviewDelayMin: number
   /** A word is auto-marked `known` once its FSRS stability reaches this many days. */
   knownStabilityDays: number
+  /** The Thesaurus: max cluster practice rounds per day. */
+  clusterDailyCap: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -17,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   requestRetention: 0.9,
   firstReviewDelayMin: 10,
   knownStabilityDays: 21,
+  clusterDailyCap: 10,
 }
 
 export function mergeSettings(stored: Partial<Settings> | undefined): Settings {

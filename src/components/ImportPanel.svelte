@@ -80,7 +80,13 @@
       {#each reports as { name, r } (name)}
         <div class="report">
           <b>{name}</b>:
-          {r.added} added, {r.unchanged} already there{#if r.updated}, {r.updated} updated{/if}{#if r.differing.length}, {r.differing.length} differ from your edited copy (kept){/if}{#if r.skippedDeleted}, {r.skippedDeleted} previously deleted (skipped){/if}{#if r.skippedInvalid}, <span class="bad">{r.skippedInvalid} skipped as incomplete</span>{/if}.
+          {#if r.clusters}
+            <span class="clu">{r.clusters.added} synonym clusters added, {r.clusters.unchanged} already there{#if r.clusters.updated}, {r.clusters.updated} updated{/if}{#if r.clusters.differing.length}, {r.clusters.differing.length} differ from your copy (kept){/if}{#if r.clusters.skippedDeleted}, {r.clusters.skippedDeleted} previously deleted (skipped){/if}{#if r.clusters.skippedInvalid}, <span class="bad">{r.clusters.skippedInvalid} skipped as incomplete</span>{/if}{#if r.clusters.reviewsRestored}, {r.clusters.reviewsRestored} practice rounds restored{/if}.</span>
+            {#if r.added || r.unchanged || r.skippedInvalid} Words: {/if}
+          {/if}
+          {#if !r.clusters || r.added || r.unchanged || r.skippedInvalid}
+            {r.added} added, {r.unchanged} already there{#if r.updated}, {r.updated} updated{/if}{#if r.differing.length}, {r.differing.length} differ from your edited copy (kept){/if}{#if r.skippedDeleted}, {r.skippedDeleted} previously deleted (skipped){/if}{#if r.skippedInvalid}, <span class="bad">{r.skippedInvalid} skipped as incomplete</span>{/if}.
+          {/if}
           {#each problemLines(r) as w, i (i)}<div class="warn">line {w.line}: {w.message}</div>{/each}
         </div>
       {/each}

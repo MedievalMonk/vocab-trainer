@@ -30,6 +30,14 @@ export function entryIdFor(key: string): string {
   return 'e' + cyrb53(key).toString(36)
 }
 
+/** Identity of a synonym cluster: its title, normalised. */
+export const clusterKey = (title: string) => norm(title)
+
+/** Stable cluster id from the key, like entryIdFor ('k' prefix keeps the two id spaces apart). */
+export function clusterIdFor(key: string): string {
+  return 'k' + cyrb53(key).toString(36)
+}
+
 export function normalizeCollection(c: string): string {
   return c
     .split('>')

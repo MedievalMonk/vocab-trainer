@@ -7,6 +7,8 @@
   import Session from './components/Session.svelte'
   import Stats from './components/Stats.svelte'
   import Study from './components/Study.svelte'
+  import Thesaurus from './components/Thesaurus.svelte'
+  import ThesaurusSession from './components/ThesaurusSession.svelte'
 
   onMount(() => app.init())
 
@@ -14,7 +16,7 @@
     { route: 'review', label: 'Review' },
     { route: 'study', label: 'Study' },
     { route: 'library', label: 'Library' },
-    { route: 'stats', label: 'Stats' },
+    { route: 'thesaurus', label: 'Thesaurus' },
     { route: 'games', label: 'Games' },
   ]
 </script>
@@ -28,7 +30,7 @@
 {:else if !app.svc}
   <div class="page"><p class="muted">Opening the card index…</p></div>
 {:else}
-  {#if app.applyUpdate && !app.session}
+  {#if app.applyUpdate && !app.session && !app.thesaurus}
     <div class="update" role="status">
       <span>A new version is ready.</span>
       <button class="btn" onclick={() => app.applyUpdate?.()}>Reload to update</button>
@@ -37,7 +39,9 @@
   <nav class="tabs" aria-label="Sections">
     <span class="brand mono">Vocab · Index</span>
     {#each TABS as t (t.route)}
-      <button class:on={app.route === t.route} aria-current={app.route === t.route ? 'page' : undefined} onclick={() => app.go(t.route)}>
+      <!-- Stats is reached from the Review screen, so Review stays lit while you are there. -->
+      {@const here = app.route === t.route || (t.route === 'review' && app.route === 'stats')}
+      <button class:on={here} aria-current={here ? 'page' : undefined} onclick={() => app.go(t.route)}>
         {t.label}
       </button>
     {/each}
@@ -46,11 +50,15 @@
   {#if app.route === 'review'}<Dashboard />
   {:else if app.route === 'study'}<Study />
   {:else if app.route === 'library'}<Library />
+  {:else if app.route === 'thesaurus'}<Thesaurus />
   {:else if app.route === 'stats'}<Stats />
   {:else}<Games />{/if}
 
   {#if app.session}
     {#key app.session}<Session spec={app.session} />{/key}
+  {/if}
+  {#if app.thesaurus}
+    {#key app.thesaurus}<ThesaurusSession spec={app.thesaurus} />{/key}
   {/if}
 {/if}
 

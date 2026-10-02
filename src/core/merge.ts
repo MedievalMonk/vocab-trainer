@@ -1,5 +1,6 @@
 import { createEventFactory, type EntryState, type VocabEvent, type VocabState } from './events'
 import { entryIdFor, entryKey } from './identity'
+import type { ClusterImportReport } from './clusterMerge'
 import type { EntryContent, ParsedDocument, ParsedEntry, ParseWarning } from './types'
 
 export interface ImportContext {
@@ -25,6 +26,8 @@ export interface ImportReport {
   skippedRepeated: number
   reviewsRestored: number
   warnings: ParseWarning[]
+  /** Present when the imported text contained synonym clusters. */
+  clusters?: ClusterImportReport
 }
 
 const CONTENT_FIELDS = ['word', 'pos', 'definition', 'example', 'polish', 'section', 'register', 'similarExpressions'] as const

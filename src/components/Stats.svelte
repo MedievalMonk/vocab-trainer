@@ -28,6 +28,7 @@
 </script>
 
 <div class="page">
+  <button class="back mono" onclick={() => app.go('review')}>‹ Review</button>
   <div class="title">
     <h1>Stats</h1>
     {#if sinceLabel}<span class="mono since">Since {sinceLabel}{s.sinceReset ? ' · last reset' : ''}</span>{/if}
@@ -158,6 +159,7 @@
 </div>
 
 <style>
+  .back { appearance: none; background: none; border: 0; color: var(--brass); cursor: pointer; padding: 0.3rem 0; margin-bottom: 0.6rem; }
   .title { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
   h1 { font-size: 2.2rem; }
   .since { color: var(--text-3); }

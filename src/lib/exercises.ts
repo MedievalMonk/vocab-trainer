@@ -12,9 +12,13 @@ export const KIND_LABEL: Record<ExerciseKind, string> = {
 /** "current (electric)" -> "current": the qualifier disambiguates, it is not part of the word. */
 export const headword = (w: string) => w.replace(/\s*\(.*?\)/g, '').trim()
 
-/** Idioms and phrases get the wider, distinct card. */
+/**
+ * Idioms and idiom-like phrases get the wider, distinct card: entries filed as idioms, or carrying
+ * the idiom-only fields (register, similar expressions). A plain multi-word term whose part of
+ * speech happens to be "noun phrase" ("atomic number") is an ordinary entry.
+ */
 export function isPhrase(e: EntryState['content']): boolean {
-  return /idiom|phrase|expression|proverb/i.test(e.pos) || /^idioms\b/i.test(e.collection) || !!e.register || !!e.similarExpressions
+  return /^idiom/i.test(e.pos) || /proverb|saying/i.test(e.pos) || /^idioms\b/i.test(e.collection) || !!e.register || !!e.similarExpressions
 }
 
 export function normalizeAnswer(s: string): string {

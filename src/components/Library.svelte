@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import type { EntryState } from '../core/events'
   import { STATUSES, type Status } from '../core/types'
   import { app } from '../lib/app.svelte'
@@ -13,7 +14,9 @@
   let status = $state<'' | Status>('')
   let limit = $state(80)
   let editing = $state<{ id: string | null } | null>(null)
-  let showImport = $state(false)
+  // Open from the start when there is nothing yet, and then stay open, so its report is not lost
+  // the moment the first words arrive.
+  let showImport = $state(untrack(() => app.svc!.counts().total === 0))
 
   const counts = $derived.by(() => {
     app.rev
@@ -77,11 +80,11 @@
     </div>
     <div class="row">
       <button class="btn" onclick={() => (editing = { id: null })}>Add a word</button>
-      <button class="btn" class:primary={all.length === 0} onclick={() => (showImport = !showImport)}>{showImport ? 'Hide import' : 'Import / Export'}</button>
+      <button class="btn" class:primary={all.length === 0 && !showImport} onclick={() => (showImport = !showImport)}>{showImport ? 'Hide import' : 'Import / Export'}</button>
     </div>
   </div>
 
-  {#if showImport || all.length === 0}
+  {#if showImport}
     <ImportPanel />
   {/if}
 

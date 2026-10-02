@@ -94,6 +94,7 @@
             Start repetitions
           </button>
           <button class="btn quiet" onclick={() => app.go('study')}>New words</button>
+          <button class="btn quiet" onclick={() => app.go('stats')}>Statistics</button>
         </div>
         {#if dash.remainingToday === 0 && dash.dueNow > 0}
           <p class="note">Today's limit of {dash.dailyCap} is reached. The rest keeps until tomorrow, and nothing is lost.</p>
